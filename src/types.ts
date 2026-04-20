@@ -47,6 +47,9 @@ export enum TokenType {
   STAR  = "STAR",   // *
   SLASH = "SLASH",  // /
 
+  // Cross-file separator
+  COLONCOLON = "COLONCOLON", // ::
+
   // Indentation / structure
   INDENT  = "INDENT",
   DEDENT  = "DEDENT",
@@ -127,6 +130,8 @@ export interface DeclarationNode {
   type: "declare";
   name: string;
   value: Expression;
+  /** true when `declare global` syntax or declaration lives in a globals file */
+  isGlobal: boolean;
   line: number;
 }
 
@@ -190,6 +195,44 @@ export interface JsNode {
 export interface Program {
   type: "program";
   body: Node[];
+}
+
+// ──────────────────────────────────────────────
+// Multi-file project types
+// ──────────────────────────────────────────────
+
+/** Points to a named chapter inside a specific file. */
+export interface LabelRef {
+  file: string;
+  chapter: BlockNode;
+}
+
+/**
+ * A single parsed file inside a project.
+ * `labels` maps chapter names to their BlockNode for O(1) lookup.
+ */
+export interface ScriptFile {
+  filename: string;
+  ast: Program;
+  labels: Record<string, BlockNode>;
+  declarations: DeclarationNode[];
+}
+
+/**
+ * A compiled multi-file project ready to be executed by `Engine`.
+ * Build with `loadProject()`.
+ */
+export interface Project {
+  type: "project";
+  files: Record<string, ScriptFile>;
+  /** Maps "filename::CHAPTER" → LabelRef for O(1) cross-file goto resolution. */
+  globalLabels: Record<string, LabelRef>;
+  /** All declarations that are scoped globally (from globals files or `declare global`). */
+  globalDeclarations: DeclarationNode[];
+  /** Set of variable names that are globally scoped — used by the runtime. */
+  globalVarNames: ReadonlySet<string>;
+  /** Filename where execution begins (first non-globals file). */
+  entryFile: string;
 }
 
 // ──────────────────────────────────────────────

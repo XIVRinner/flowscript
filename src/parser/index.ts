@@ -264,11 +264,19 @@ class Parser {
   private parseDeclare(): Node {
     const line = this.peek().line;
     this.advance(); // DECLARE
+
+    // Optional `global` modifier: declare global x = ...
+    let isGlobal = false;
+    if (this.check(TokenType.IDENTIFIER) && this.peek().value === "global") {
+      isGlobal = true;
+      this.advance(); // consume 'global'
+    }
+
     const name = this.expect(TokenType.IDENTIFIER).value;
     this.expect(TokenType.ASSIGN);
     const value = this.expression();
     if (this.check(TokenType.NEWLINE)) this.advance();
-    return { type: "declare", name, value, line };
+    return { type: "declare", name, value, isGlobal, line };
   }
 
   private parseChapter(): Node {
@@ -312,7 +320,23 @@ class Parser {
   private parseGoto(): Node {
     const line = this.peek().line;
     this.advance(); // GOTO
-    const target = this.expect(TokenType.IDENTIFIER).value;
+
+    // Collect target: IDENTIFIER (DOT IDENTIFIER)* (COLONCOLON IDENTIFIER)?
+    // Supports: "LABEL" or "file.flow::LABEL"
+    let target = this.expect(TokenType.IDENTIFIER).value;
+
+    // Collect dotted file extension segments (e.g. shop .flow)
+    while (this.check(TokenType.DOT)) {
+      this.advance();
+      target += "." + this.expect(TokenType.IDENTIFIER).value;
+    }
+
+    // Cross-file separator: ::
+    if (this.check(TokenType.COLONCOLON)) {
+      this.advance();
+      target += "::" + this.expect(TokenType.IDENTIFIER).value;
+    }
+
     if (this.check(TokenType.NEWLINE)) this.advance();
     return { type: "goto", target, line };
   }

@@ -12,6 +12,29 @@
       "require": "./dist/index.cjs"
     }
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/XIVRinner/flowscript.git"
+  },
+  "homepage": "https://xivrunner.github.io/flowscript/",
+  "bugs": {
+    "url": "https://github.com/XIVRinner/flowscript/issues"
+  },
+  "keywords": [
+    "dialogue",
+    "scripting",
+    "DSL",
+    "narrative",
+    "game",
+    "engine",
+    "visual-novel",
+    "typescript"
+  ],
+  "license": "MIT",
   "scripts": {
     "build": "tsup && tsc --emitDeclarationOnly --outDir dist",
     "dev": "tsup --watch",

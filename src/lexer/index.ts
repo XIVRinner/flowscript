@@ -130,6 +130,7 @@ function tokenizeLine(line: string, lineNo: number, out: Token[]): void {
     // Two-character tokens
     const two = line.slice(p, p + 2);
     switch (two) {
+      case "::": push(TokenType.COLONCOLON, "::"); p += 2; continue;
       case "==": push(TokenType.EQ,    "=="); p += 2; continue;
       case "!=": push(TokenType.NEQ,   "!="); p += 2; continue;
       case ">=": push(TokenType.GTE,   ">="); p += 2; continue;

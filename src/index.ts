@@ -29,6 +29,10 @@ export { tokenize }                     from "./lexer/index.js";
 // ── Parser ────────────────────────────────────────────────
 export { parse, parseExpressionTokens } from "./parser/index.js";
 
+// ── Project loader ────────────────────────────────────────
+export { loadProject, resolveLabel }    from "./project/index.js";
+export type { LoadInput }               from "./project/index.js";
+
 // ── Runtime ───────────────────────────────────────────────
 export { Engine }                       from "./runtime/index.js";
 
@@ -57,6 +61,9 @@ export type {
   SetNode,
   BlockNode,
   JsNode,
+  LabelRef,
+  ScriptFile,
+  Project,
   StepResult,
   FunctionHook,
   RuntimeContext,

@@ -1,10 +1,11 @@
 import {
   Program, Node, Expression,
-  BlockNode,
+  Project,
   StepResult, FunctionHook, RuntimeContext,
 } from "../types.js";
 import { tokenize } from "../lexer/index.js";
 import { parseExpressionTokens } from "../parser/index.js";
+import { isProject, wrapSingleProgram, resolveLabel } from "../project/index.js";
 
 // ─────────────────────────────────────────────────────────────
 // Execution frame – a list of nodes with a read cursor
@@ -20,44 +21,75 @@ interface Frame {
 // ─────────────────────────────────────────────────────────────
 
 export class Engine {
+  private readonly project: Project;
+
+  /** Currently executing file (used for local goto resolution). */
+  private currentFile: string;
+
+  /** Execution frame stack. */
   private stack: Frame[] = [];
+
+  /**
+   * Global variable store — shared across all files.
+   * Populated from `globalDeclarations` on the first `next()` call.
+   */
+  private globals: Map<string, unknown> = new Map();
+
+  /**
+   * Local variable store — file/session-local state.
+   * `declare` (non-global) and `set` write here by default.
+   */
   private state: Map<string, unknown> = new Map();
-  private chapters: Map<string, BlockNode> = new Map();
+
   private hooks: Map<string, FunctionHook> = new Map();
 
-  constructor(program: Program) {
-    // Pre-register all chapters for goto resolution
-    for (const node of program.body) {
-      if (node.type === "block") {
-        this.chapters.set(node.name, node);
-      }
+  /** Becomes true after `initGlobals()` runs — prevents double-evaluation. */
+  private initialized = false;
+
+  // ──────────────────────────────────────────────────────────
+
+  constructor(input: Program | Project) {
+    this.project = isProject(input) ? input : wrapSingleProgram(input);
+    this.currentFile = this.project.entryFile;
+
+    const entryFile = this.project.files[this.currentFile];
+    if (!entryFile) {
+      throw new Error(
+        `Engine: entry file "${this.currentFile}" not found in project`
+      );
     }
-    // Execution starts from the top-level body
-    this.stack.push({ nodes: program.body, index: 0 });
+
+    this.stack.push({ nodes: entryFile.ast.body, index: 0 });
   }
 
   // ── public API ──────────────────────────────────────────
 
   /**
    * Register a callable function hook.
-   * Usage: engine.registerFunction("log", (ctx, msg) => console.log(msg))
+   *
+   * Usage:
+   *   engine.registerFunction("Actor", (_ctx, name) => ({ name }))
+   *   engine.registerFunction("log",   (_ctx, msg)  => console.log(msg))
    */
   registerFunction(name: string, fn: FunctionHook): this {
     this.hooks.set(name, fn);
     return this;
   }
 
-  /** Return a snapshot of the current variable state. */
-  getState(): Record<string, unknown> {
-    return Object.fromEntries(this.state);
-  }
-
   /**
-   * Advance execution by one dialogue beat.
+   * Advance execution by one visible beat.
    * Returns `{ type: "say" | "narration" | "end" }`.
-   * Skips over silent nodes (declare, set, goto, call, if, block) internally.
+   * Silent nodes (declare, set, if, goto, call, block) are consumed internally.
+   *
+   * Global declarations are evaluated lazily on the first call, so all
+   * `registerFunction` calls must happen before the first `next()`.
    */
   next(): StepResult {
+    if (!this.initialized) {
+      this.initGlobals();
+      this.initialized = true;
+    }
+
     while (true) {
       if (this.stack.length === 0) return { type: "end" };
 
@@ -74,13 +106,66 @@ export class Engine {
     }
   }
 
+  /**
+   * Returns a snapshot of all variables — globals merged with local state.
+   * Local state takes precedence on key collision.
+   */
+  getState(): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of this.globals) result[k] = v;
+    for (const [k, v] of this.state)   result[k] = v;
+    return result;
+  }
+
+  /** Name of the file currently being executed. */
+  getCurrentFile(): string {
+    return this.currentFile;
+  }
+
+  // ── initialisation ───────────────────────────────────────
+
+  /**
+   * Evaluate all global declarations and store in `this.globals`.
+   * Called transparently on the first `next()`.
+   */
+  private initGlobals(): void {
+    for (const decl of this.project.globalDeclarations) {
+      this.globals.set(decl.name, this.evalExpr(decl.value));
+    }
+  }
+
+  // ── variable resolution ──────────────────────────────────
+
+  private getVar(name: string): unknown {
+    if (this.state.has(name))   return this.state.get(name);
+    if (this.globals.has(name)) return this.globals.get(name);
+    return null;
+  }
+
+  /**
+   * Write `value` to the appropriate scope.
+   * If the variable already lives in globals, update globals so the change
+   * is visible across all files. Otherwise write to local state.
+   */
+  private setVar(name: string, value: unknown): void {
+    if (this.globals.has(name)) {
+      this.globals.set(name, value);
+    } else {
+      this.state.set(name, value);
+    }
+  }
+
+  private isGlobalVar(name: string): boolean {
+    return this.project.globalVarNames.has(name);
+  }
+
   // ── node execution ───────────────────────────────────────
 
   private exec(node: Node): StepResult | null {
     switch (node.type) {
 
       case "say": {
-        const actor = this.state.get(node.actor);
+        const actor = this.getVar(node.actor);
         return { type: "say", actor, text: this.interpolate(node.text) };
       }
 
@@ -88,20 +173,28 @@ export class Engine {
         return { type: "narration", text: this.interpolate(node.text) };
 
       case "declare": {
+        const isGlobal = node.isGlobal || this.isGlobalVar(node.name);
+        // Skip global declarations that were already evaluated in initGlobals()
+        if (isGlobal && this.initialized) return null;
         const v = this.evalExpr(node.value);
-        this.state.set(node.name, v);
+        if (isGlobal) {
+          this.globals.set(node.name, v);
+        } else {
+          this.state.set(node.name, v);
+        }
         return null;
       }
 
       case "set": {
         const v = this.evalExpr(node.value);
-        this.state.set(node.name, v);
+        this.setVar(node.name, v);
         return null;
       }
 
       case "if": {
         for (const branch of node.branches) {
-          const pass = branch.condition === null || this.evalExpr(branch.condition);
+          const pass =
+            branch.condition === null || this.evalExpr(branch.condition);
           if (pass) {
             this.stack.push({ nodes: branch.body, index: 0 });
             break;
@@ -111,12 +204,15 @@ export class Engine {
       }
 
       case "goto": {
-        const chapter = this.chapters.get(node.target);
-        if (!chapter) {
-          throw new Error(`goto: unknown chapter "${node.target}" at line ${node.line}`);
-        }
-        // Clear the entire stack; start fresh from the target chapter body
-        this.stack = [{ nodes: chapter.body, index: 0 }];
+        const ref = resolveLabel(
+          this.project,
+          this.currentFile,
+          node.target,
+          node.line
+        );
+        // Jump: clear the call stack and enter the target chapter
+        this.currentFile = ref.file;
+        this.stack = [{ nodes: ref.chapter.body, index: 0 }];
         return null;
       }
 
@@ -130,12 +226,13 @@ export class Engine {
       }
 
       case "block":
-        // Chapters encountered during normal flow push their body inline
+        // Chapter blocks encountered during sequential top-level execution
+        // are pushed inline (not jumped to).
         this.stack.push({ nodes: node.body, index: 0 });
         return null;
 
       case "js":
-        // js: blocks are stubbed – no execution
+        // js: blocks are stubbed — no execution
         return null;
 
       default:
@@ -152,10 +249,10 @@ export class Engine {
         return expr.value;
 
       case "identifier":
-        return this.state.get(expr.name) ?? null;
+        return this.getVar(expr.name);
 
       case "binary": {
-        // Short-circuit evaluation for && and ||
+        // Short-circuit for && and ||
         if (expr.operator === "&&") {
           return this.evalExpr(expr.left) && this.evalExpr(expr.right);
         }
@@ -204,12 +301,8 @@ export class Engine {
     return null;
   }
 
-  // ── string interpolation  ─────────────────────────────────
+  // ── string interpolation ─────────────────────────────────
 
-  /**
-   * Replace ${…} patterns inside a string by evaluating each
-   * inner expression in the current state context.
-   */
   private interpolate(text: string): string {
     if (!text.includes("${")) return text;
 
@@ -229,8 +322,9 @@ export class Engine {
 
   private makeContext(): RuntimeContext {
     return {
-      getVar: (name) => this.state.get(name) ?? null,
-      setVar: (name, value) => { this.state.set(name, value); },
+      getVar: (name) => this.getVar(name),
+      setVar: (name, value) => this.setVar(name, value),
     };
   }
 }
+
