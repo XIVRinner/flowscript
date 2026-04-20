@@ -1,5 +1,5 @@
 import { Component, inject, input } from '@angular/core';
-import { FlowscriptService } from '../flowscript.service';
+import { ValeflowService } from '../valeflow.service';
 
 @Component({
   selector: 'app-dialogue-runner',
@@ -202,5 +202,5 @@ import { FlowscriptService } from '../flowscript.service';
   `],
 })
 export class DialogueRunnerComponent {
-  protected readonly svc = inject(FlowscriptService);
+  protected readonly svc = inject(ValeflowService);
 }

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// Built-in example FlowScript scripts for the demo.
+// Built-in example ValeFlow scripts for the demo.
 // Sources now live in /public/demo-scripts as real .fsc files.
 // ─────────────────────────────────────────────────────────────
 
@@ -105,6 +105,6 @@ export function loadExperimentStarter(): Promise<string> {
 export const EXPERIMENT_SCRIPT: DemoScript = {
   id: 'experiment',
   title: '⚗ Playground',
-  description: 'Write and run your own FlowScript. Edit the source on the left and click Run.',
+  description: 'Write and run your own ValeFlow script. Edit the source on the left and click Run.',
   source: '',
 };

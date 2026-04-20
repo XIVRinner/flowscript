@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { FlowscriptService } from '../flowscript.service';
+import { ValeflowService } from '../valeflow.service';
 
 @Component({
   selector: 'app-state-viewer',
@@ -109,7 +109,7 @@ import { FlowscriptService } from '../flowscript.service';
   `],
 })
 export class StateViewerComponent {
-  protected readonly svc = inject(FlowscriptService);
+  protected readonly svc = inject(ValeflowService);
 
   entries() {
     return Object.entries(this.svc.state()).map(([key, value]) => ({ key, value }));

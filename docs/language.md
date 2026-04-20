@@ -1,6 +1,6 @@
-# FlowScript Language Reference
+# ValeFlow Language Reference
 
-FlowScript is an indentation-based dialogue scripting language. Structure is expressed through indentation — no braces, no `end` keywords.
+ValeFlow is an indentation-based dialogue scripting language. Structure is expressed through indentation — no braces, no `end` keywords.
 
 ---
 
@@ -315,7 +315,7 @@ if !hasKey:
 
 ## Complete Example
 
-```flowscript
+```valeflow
 declare hero   = Actor("Lyra")
 declare guard  = Actor("Guard")
 declare hasKey = false

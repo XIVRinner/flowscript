@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "flowscript-demo": {
+    "valeflow-demo": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -70,7 +70,7 @@
                 }
               ],
               "outputHashing": "all",
-              "baseHref": "/flowscript/"
+              "baseHref": "/valeflow/"
             },
             "development": {
               "optimization": false,
@@ -84,10 +84,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "flowscript-demo:build:production"
+              "buildTarget": "valeflow-demo:build:production"
             },
             "development": {
-              "buildTarget": "flowscript-demo:build:development"
+              "buildTarget": "valeflow-demo:build:development"
             }
           },
           "defaultConfiguration": "development"

@@ -58,7 +58,7 @@ export interface SerializedChoice {
  *
  * @example
  * ```ts
- * import { compile, serializeTree } from "flowscript";
+ * import { compile, serializeTree } from "@rinner/valeflow";
  * const program = compile(source);
  * const tree = serializeTree(program);
  * console.log(JSON.stringify(tree, null, 2));

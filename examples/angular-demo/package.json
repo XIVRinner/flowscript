@@ -1,12 +1,12 @@
 {
-  "name": "flowscript-demo",
+  "name": "@rinner/valeflow-demo",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
     "build:gh": "ng build --configuration production",
-    "deploy": "npm run build:gh && npx angular-cli-ghpages --dir=dist/flowscript-demo/browser",
+    "deploy": "npm run build:gh && npx angular-cli-ghpages --dir=dist/valeflow-demo/browser",
     "watch": "ng build --watch --configuration development"
   },
   "private": true,

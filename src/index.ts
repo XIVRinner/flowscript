@@ -1,9 +1,9 @@
 /**
- * FlowScript – dialogue engine public API
+ * ValeFlow – dialogue engine public API
  *
  * Quick start:
  *
- *   import { compile, Engine } from "flowscript";
+ *   import { compile, Engine } from "@rinner/valeflow";
  *
  *   const program = compile(source);
  *   const engine  = new Engine(program);
@@ -94,7 +94,7 @@ import { parse    as _parse    } from "./parser/index.js";
 import type { Program }           from "./types.js";
 
 /**
- * Tokenise + parse a FlowScript source string in one call.
+ * Tokenise + parse a ValeFlow source string in one call.
  *
  * @param source  Raw .fsc source text
  * @returns       Parsed Program AST

@@ -12,7 +12,7 @@ import { parse }     from "../parser/index.js";
 export interface LoadInput {
   /** Logical filename used to resolve cross-file goto targets. */
   filename: string;
-  /** Raw FlowScript source text for this file. */
+  /** Raw ValeFlow source text for this file. */
   source: string;
 }
 
@@ -21,7 +21,7 @@ export interface LoadInput {
 // ─────────────────────────────────────────────────────────────
 
 /**
- * Parse, validate, and link multiple FlowScript files into a single
+ * Parse, validate, and link multiple ValeFlow files into a single
  * executable `Project`.
  *
  * Rules:

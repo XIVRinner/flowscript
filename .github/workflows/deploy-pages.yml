@@ -30,13 +30,13 @@ jobs:
             package-lock.json
             examples/angular-demo/package-lock.json
 
-      # ── 3. Build the FlowScript library ─────────────────────────
-      # The Angular demo's package.json references "flowscript" as
-      # file:../.. so dist/ must exist before npm install runs there.
+      # ── 3. Build the ValeFlow library ───────────────────────────
+      # The Angular demo's package.json references the local ValeFlow
+      # package via file:../.. so dist/ must exist before npm install runs there.
       - name: Install root dependencies
         run: npm ci
 
-      - name: Build FlowScript library
+      - name: Build ValeFlow library
         run: npm run build
 
       # ── 4. Install Angular demo dependencies ────────────────────
@@ -45,7 +45,7 @@ jobs:
         run: npm ci
 
       # ── 5. Build for production ─────────────────────────────────
-      # baseHref "/flowscript/" is already set in angular.json
+      # baseHref "/valeflow/" is already set in angular.json
       # production configuration.
       - name: Build Angular demo (production)
         working-directory: examples/angular-demo
@@ -56,6 +56,6 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: examples/angular-demo/dist/flowscript-demo/browser
+          publish_dir: examples/angular-demo/dist/valeflow-demo/browser
           # Optional: use a custom commit message
           commit_message: 'deploy: ${{ github.sha }}'

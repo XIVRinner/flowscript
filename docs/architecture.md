@@ -1,4 +1,4 @@
-# FlowScript — Architecture & Internals
+# ValeFlow — Architecture & Internals
 
 This document describes how source text becomes an executing dialogue. It covers the three pipeline stages (lexer → parser → runtime) and explains the key design decisions.
 
@@ -41,7 +41,7 @@ Convert raw source text into a flat `Token[]` list. Every token carries its `typ
 
 ### Indentation handling
 
-FlowScript is indentation-significant (like Python). The lexer maintains an **indent stack** — a stack of column numbers representing currently open indent levels.
+ValeFlow is indentation-significant (like Python). The lexer maintains an **indent stack** — a stack of column numbers representing currently open indent levels.
 
 - When a line's leading whitespace is **deeper** than the top of the stack, an `INDENT` token is emitted and the new depth is pushed.
 - When it is **shallower**, one or more `DEDENT` tokens are emitted (one per closed level) and matching depths are popped.
@@ -200,7 +200,7 @@ Errors inside an interpolation expression are caught and silently replaced with 
 
 ### State
 
-All variables are stored in a single `Map<string, unknown>`. There is no scoping — every variable is global within a running script. This is intentional: FlowScript is a dialogue *control* language, not a general-purpose language.
+All variables are stored in a single `Map<string, unknown>`. There is no scoping — every variable is global within a running script. This is intentional: ValeFlow is a dialogue *control* language, not a general-purpose language.
 
 ---
 
@@ -244,10 +244,10 @@ src/
 ## Design Principles
 
 **Controlled, not Turing-complete.**  
-FlowScript deliberately excludes while loops, closures, and arbitrary code execution. Behaviour is predictable and auditable from the script source alone.
+ValeFlow deliberately excludes while loops, closures, and arbitrary code execution. Behaviour is predictable and auditable from the script source alone.
 
 **The host controls pacing.**  
-`engine.next()` returns one beat and blocks. The host application decides when to call it — on a keypress, a timer, a UI button. FlowScript has no concept of time.
+`engine.next()` returns one beat and blocks. The host application decides when to call it — on a keypress, a timer, a UI button. ValeFlow has no concept of time.
 
 **Silent vs. visible nodes.**  
 Only `say` and `narration` produce `StepResult` values. Everything else is silently consumed. This separation keeps the host integration loop simple: just check `step.type`.

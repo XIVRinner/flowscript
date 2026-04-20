@@ -17,7 +17,7 @@ const KEYWORDS: Record<string, TokenType> = {
 };
 
 /**
- * Tokenise a FlowScript source string into a flat token list.
+ * Tokenise a ValeFlow source string into a flat token list.
  * Indentation changes are emitted as INDENT / DEDENT tokens.
  */
 export function tokenize(source: string): Token[] {

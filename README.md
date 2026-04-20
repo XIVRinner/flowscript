@@ -1,4 +1,4 @@
-# FlowScript
+# ValeFlow
 
 A TypeScript-first dialogue scripting engine and DSL for branching narratives. Write stories in a clean, indentation-based syntax; drive them step-by-step from your game, app, or UI.
 
@@ -267,7 +267,7 @@ src/
   index.ts            — Public API + compile() convenience function
 
 examples/
-  example1.fsc        — Sample FlowScript source file
+  example1.fsc        — Sample ValeFlow source file
   angular-demo/       — Angular 21 showcase app
 ```
 
@@ -295,7 +295,7 @@ The demo includes 8 tabs:
 | The Riddle | Branch by variable value |
 | ⬡ Choices | Interactive player choices |
 | ⊞ Tree View | Full AST as a colour-coded collapsible tree |
-| ⚗ Playground | Live editor — write and run any FlowScript |
+| ⚗ Playground | Live editor — write and run any ValeFlow script |
 
 ---
 

@@ -18,11 +18,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/XIVRinner/flowscript.git"
+    "url": "git+https://github.com/XIVRinner/valeflow.git"
   },
-  "homepage": "https://xivrunner.github.io/flowscript/",
+  "homepage": "https://xivrunner.github.io/valeflow/",
   "bugs": {
-    "url": "https://github.com/XIVRinner/flowscript/issues"
+    "url": "https://github.com/XIVRinner/valeflow/issues"
   },
   "keywords": [
     "dialogue",

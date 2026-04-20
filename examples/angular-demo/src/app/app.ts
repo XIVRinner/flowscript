@@ -3,7 +3,7 @@ import { DialogueRunnerComponent } from './dialogue-runner/dialogue-runner.compo
 import { StateViewerComponent } from './state-viewer/state-viewer.component';
 import { TreeViewerComponent } from './tree-viewer/tree-viewer.component';
 import { DEMO_SCRIPTS, DemoScript, EXPERIMENT_SCRIPT, hydrateDemoScripts, loadExperimentStarter } from './scripts';
-import { FlowscriptService } from './flowscript.service';
+import { ValeflowService } from './valeflow.service';
 @Component({
   selector: 'app-root',
   imports: [DialogueRunnerComponent, StateViewerComponent, TreeViewerComponent],
@@ -13,7 +13,7 @@ import { FlowscriptService } from './flowscript.service';
       <header class="topbar">
         <div class="brand">
           <span class="brand-icon">◈</span>
-          <span class="brand-name">FlowScript</span>
+          <span class="brand-name">ValeFlow</span>
           <span class="brand-sub">engine demo</span>
         </div>
 
@@ -36,7 +36,7 @@ import { FlowscriptService } from './flowscript.service';
       <main class="body">
         <!-- Left: source panel -->
         <aside class="source-panel">
-          <div class="panel-label">{{ isExperiment ? 'Playground' : 'FlowScript source' }}</div>
+          <div class="panel-label">{{ isExperiment ? 'Playground' : 'ValeFlow source' }}</div>
 
           @if (isExperiment) {
             <textarea
@@ -290,7 +290,7 @@ import { FlowscriptService } from './flowscript.service';
   `],
 })
 export class App implements OnInit {
-  protected readonly svc = inject(FlowscriptService);
+  protected readonly svc = inject(ValeflowService);
   protected scripts: DemoScript[] = [];
   protected activeScript: DemoScript | null = null;
   protected experimentSource = '';

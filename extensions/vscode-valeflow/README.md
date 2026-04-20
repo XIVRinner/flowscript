@@ -1,6 +1,6 @@
 # ValeFlow Language Extension
 
-Local VS Code language support for ValeFlow / FlowScript files.
+Local VS Code language support for ValeFlow files.
 
 ## Features
 

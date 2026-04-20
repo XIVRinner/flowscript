@@ -1,13 +1,13 @@
-# FlowScript API Reference
+# ValeFlow API Reference
 
 ---
 
 ## `compile(source: string): Program`
 
-Tokenises and parses a FlowScript source string in one call. This is the primary entry point for embedding scripts.
+Tokenises and parses a ValeFlow source string in one call. This is the primary entry point for embedding scripts.
 
 ```ts
-import { compile } from "flowscript";
+import { compile } from "@rinner/valeflow";
 
 const program = compile(`
   declare hero = Actor("Lyra")
@@ -23,7 +23,7 @@ const program = compile(`
 Converts raw source text into a flat list of tokens. You rarely need this directly — use `compile()` instead.
 
 ```ts
-import { tokenize } from "flowscript";
+import { tokenize } from "@rinner/valeflow";
 
 const tokens = tokenize(`declare x = 42`);
 // [{ type: "DECLARE", value: "declare", line: 1 }, ...]
@@ -36,7 +36,7 @@ const tokens = tokenize(`declare x = 42`);
 Converts a token list produced by `tokenize()` into a typed AST.
 
 ```ts
-import { tokenize, parse } from "flowscript";
+import { tokenize, parse } from "@rinner/valeflow";
 
 const program = parse(tokenize(source));
 ```
@@ -65,7 +65,7 @@ Accepts the `Program` AST returned by `compile()` or `parse()`. Prepares the exe
 
 ### `engine.registerFunction(name, fn): this`
 
-Register a hook callable from FlowScript via `call name(…)` or via a call expression `name(…)`.
+Register a hook callable from ValeFlow via `call name(…)` or via a call expression `name(…)`.
 
 ```ts
 engine.registerFunction("Actor", (ctx, name) => ({ name }));
@@ -148,7 +148,7 @@ console.log(state.hero);  // { name: "Lyra" }
 ## Typical Integration Loop
 
 ```ts
-import { compile, Engine } from "flowscript";
+import { compile, Engine } from "@rinner/valeflow";
 
 const engine = new Engine(compile(source));
 
@@ -181,7 +181,7 @@ function advance() {
 
 ## Type Reference
 
-All types are exported from `"flowscript"`.
+All types are exported from `"@rinner/valeflow"`.
 
 ### `Program`
 
