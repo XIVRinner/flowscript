@@ -1,5 +1,10 @@
 # ValeFlow
 
+<p align="center">
+  <img src="docs/valeflow.svg" alt="ValeFlow banner" width="400" />
+</p>
+
+
 A TypeScript-first dialogue scripting engine and DSL for branching narratives. Write stories in a clean, indentation-based syntax; drive them step-by-step from your game, app, or UI.
 
 ```
@@ -35,7 +40,29 @@ chapter ENTER:
 - **Tree serializer** — `serializeTree()` exports the entire dialogue tree as clean JSON
 - **Zero dependencies** — hand-written lexer, recursive-descent parser, frame-stack runtime
 
----
+## Future Plans
+
+- **Live editing** — add/remove/modify nodes at runtime, with full state preservation
+- **Save/load** — snapshot the full engine state to support save games, undo/redo, time travel debugging
+- **Cross-file imports** — import/export variables and functions between files, with static checks
+```
+import "shop.flow"
+
+goto SHOP
+```
+- **Events / Hooks** — trigger custom events from the script, with listener support in host code
+```
+on enter SHOP:
+    call playMusic("shop_theme")
+on leave SHOP:
+    call stopMusic("shop_theme")
+```
+- **🎬 Timeline / sequencing** - allow wait comands
+- **Choice conditions** - show/hide options based on state
+- **Dialogue formatting** - customize the appearance of dialogue text
+- **Better expression support** - more complex expressions, operator precedence, function return values
+- **i18n support** - built-in features for internationalization and localization
+
 
 ## Installation
 

@@ -15,6 +15,16 @@ Local VS Code language support for ValeFlow files.
 2. Press `F5` to launch an Extension Development Host.
 3. Open any `.fsc` file to see highlighting.
 
+## Build
+
+Package the extension into a `.vsix` with:
+
+```bash
+npm run build
+```
+
+That runs `vsce package` through `npx` and includes the file icon theme from `fileicons/`.
+
 ## Covered syntax
 
 - `declare` and `declare global`

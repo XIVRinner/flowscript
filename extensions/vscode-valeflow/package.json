@@ -2,7 +2,7 @@
   "name": "valeflow-language",
   "displayName": "ValeFlow Language",
   "description": "Syntax highlighting, snippets, and editor support for ValeFlow files.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "local",
   "license": "MIT",
   "repository": {
@@ -25,6 +25,9 @@
     "dsl",
     "narrative"
   ],
+  "scripts": {
+    "build": "npx @vscode/vsce package"
+  },
   "contributes": {
     "languages": [
       {
@@ -34,7 +37,7 @@
         ],
         "extensions": [
           ".fsc",
-          ".flow"
+          ".vfc"
         ],
         "configuration": "./language-configuration.json"
       }
@@ -50,6 +53,13 @@
       {
         "language": "valeflow",
         "path": "./snippets/valeflow.code-snippets"
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "valeflow-file-icons",
+        "label": "ValeFlow File Icons",
+        "path": "./fileicons/valeflow-file-icon-theme.json"
       }
     ]
   }
