@@ -1,0 +1,244 @@
+# FlowScript API Reference
+
+---
+
+## `compile(source: string): Program`
+
+Tokenises and parses a FlowScript source string in one call. This is the primary entry point for embedding scripts.
+
+```ts
+import { compile } from "flowscript";
+
+const program = compile(`
+  declare hero = Actor("Lyra")
+  chapter START:
+      hero "Hello!"
+`);
+```
+
+---
+
+## `tokenize(source: string): Token[]`
+
+Converts raw source text into a flat list of tokens. You rarely need this directly — use `compile()` instead.
+
+```ts
+import { tokenize } from "flowscript";
+
+const tokens = tokenize(`declare x = 42`);
+// [{ type: "DECLARE", value: "declare", line: 1 }, ...]
+```
+
+---
+
+## `parse(tokens: Token[]): Program`
+
+Converts a token list produced by `tokenize()` into a typed AST.
+
+```ts
+import { tokenize, parse } from "flowscript";
+
+const program = parse(tokenize(source));
+```
+
+---
+
+## `parseExpressionTokens(tokens: Token[]): Expression`
+
+Parse a single expression from a token list. Used internally for string interpolation; exposed for advanced use cases.
+
+---
+
+## `class Engine`
+
+The runtime that executes a parsed `Program`.
+
+### Constructor
+
+```ts
+new Engine(program: Program)
+```
+
+Accepts the `Program` AST returned by `compile()` or `parse()`. Prepares the execution stack and pre-indexes all chapters for `goto` resolution.
+
+---
+
+### `engine.registerFunction(name, fn): this`
+
+Register a hook callable from FlowScript via `call name(…)` or via a call expression `name(…)`.
+
+```ts
+engine.registerFunction("Actor", (ctx, name) => ({ name }));
+engine.registerFunction("log",   (ctx, msg)  => console.log(msg));
+engine.registerFunction("setFlag", (ctx, key, val) => {
+  ctx.setVar(String(key), val);
+});
+```
+
+**Signature of `fn`:**
+
+```ts
+type FunctionHook = (ctx: RuntimeContext, ...args: unknown[]) => unknown;
+```
+
+`ctx` gives the hook read/write access to the engine's variable state:
+
+```ts
+interface RuntimeContext {
+  getVar(name: string): unknown;
+  setVar(name: string, value: unknown): void;
+}
+```
+
+Returns `this` for chaining:
+
+```ts
+engine
+  .registerFunction("Actor", (_ctx, name) => ({ name }))
+  .registerFunction("log", (_ctx, msg) => console.log(msg));
+```
+
+---
+
+### `engine.next(): StepResult`
+
+Advance execution by one **visible** beat. Silent nodes (`declare`, `set`, `if`, `goto`, `call`, `block`) are processed internally without returning.
+
+```ts
+type StepResult =
+  | { type: "say";       actor: unknown; text: string }
+  | { type: "narration"; text: string }
+  | { type: "end" };
+```
+
+**`say`** — a character spoke a line.
+
+```ts
+const step = engine.next();
+if (step.type === "say") {
+  const actor = step.actor as { name: string };
+  console.log(`${actor.name}: ${step.text}`);
+}
+```
+
+**`narration`** — unattributed narration text.
+
+```ts
+if (step.type === "narration") {
+  console.log(`  ${step.text}`);
+}
+```
+
+**`end`** — execution has finished (stack is empty). Calling `next()` after `end` continues to return `end`.
+
+---
+
+### `engine.getState(): Record<string, unknown>`
+
+Returns a shallow snapshot of all current variable values.
+
+```ts
+const state = engine.getState();
+console.log(state.coins); // 12
+console.log(state.hero);  // { name: "Lyra" }
+```
+
+---
+
+## Typical Integration Loop
+
+```ts
+import { compile, Engine } from "flowscript";
+
+const engine = new Engine(compile(source));
+
+engine
+  .registerFunction("Actor", (_ctx, name) => ({ name }))
+  .registerFunction("log",   (_ctx, msg)  => console.log(msg));
+
+function advance() {
+  const step = engine.next();
+
+  switch (step.type) {
+    case "say": {
+      const actor = step.actor as { name: string };
+      showDialogue(actor.name, step.text);
+      break;
+    }
+    case "narration":
+      showNarration(step.text);
+      break;
+    case "end":
+      showEndScreen();
+      break;
+  }
+}
+
+// Call advance() whenever the player taps "Next", presses Space, etc.
+```
+
+---
+
+## Type Reference
+
+All types are exported from `"flowscript"`.
+
+### `Program`
+
+```ts
+interface Program {
+  type: "program";
+  body: Node[];
+}
+```
+
+### `Node` (union)
+
+```ts
+type Node =
+  | DeclarationNode   // declare x = expr
+  | SayNode           // actor "text"
+  | NarrationNode     // "text"
+  | IfNode            // if / elseif / else
+  | GotoNode          // goto LABEL
+  | CallNode          // call fn(args)
+  | SetNode           // set x = expr
+  | BlockNode         // chapter NAME:
+  | JsNode;           // js: (stub)
+```
+
+### `Expression` (union)
+
+```ts
+type Expression =
+  | LiteralExpression     // 42, "text", true, null
+  | IdentifierExpression  // varName
+  | BinaryExpression      // left op right
+  | UnaryExpression       // ! expr  or  - expr
+  | CallExpression        // fn(args)  — inside expression
+  | MemberExpression;     // obj.prop
+```
+
+### `StepResult`
+
+```ts
+type StepResult =
+  | { type: "say";       actor: unknown; text: string }
+  | { type: "narration"; text: string }
+  | { type: "end" };
+```
+
+### `FunctionHook`
+
+```ts
+type FunctionHook = (ctx: RuntimeContext, ...args: unknown[]) => unknown;
+```
+
+### `RuntimeContext`
+
+```ts
+interface RuntimeContext {
+  getVar(name: string): unknown;
+  setVar(name: string, value: unknown): void;
+}
+```

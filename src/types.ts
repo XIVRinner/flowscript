@@ -1,0 +1,209 @@
+// ──────────────────────────────────────────────
+// Token types
+// ──────────────────────────────────────────────
+
+export enum TokenType {
+  // Keywords
+  DECLARE = "DECLARE",
+  CHAPTER = "CHAPTER",
+  IF      = "IF",
+  ELSEIF  = "ELSEIF",
+  ELSE    = "ELSE",
+  GOTO    = "GOTO",
+  CALL    = "CALL",
+  SET     = "SET",
+  JS      = "JS",
+
+  // Literals
+  IDENTIFIER = "IDENTIFIER",
+  STRING     = "STRING",
+  NUMBER     = "NUMBER",
+  BOOLEAN    = "BOOLEAN",
+  NULL       = "NULL",
+
+  // Symbols
+  COLON  = "COLON",
+  LPAREN = "LPAREN",
+  RPAREN = "RPAREN",
+  COMMA  = "COMMA",
+  DOT    = "DOT",
+  ASSIGN = "ASSIGN",
+  ARROW  = "ARROW",
+
+  // Comparison / logical operators
+  EQ    = "EQ",     // ==
+  NEQ   = "NEQ",    // !=
+  GT    = "GT",     // >
+  LT    = "LT",     // <
+  GTE   = "GTE",    // >=
+  LTE   = "LTE",    // <=
+  AND   = "AND",    // &&
+  OR    = "OR",     // ||
+  NOT   = "NOT",    // !
+
+  // Arithmetic operators
+  PLUS  = "PLUS",   // +
+  MINUS = "MINUS",  // -
+  STAR  = "STAR",   // *
+  SLASH = "SLASH",  // /
+
+  // Indentation / structure
+  INDENT  = "INDENT",
+  DEDENT  = "DEDENT",
+  NEWLINE = "NEWLINE",
+  EOF     = "EOF",
+}
+
+export interface Token {
+  type: TokenType;
+  value: string;
+  line: number;
+}
+
+// ──────────────────────────────────────────────
+// Expression AST nodes
+// ──────────────────────────────────────────────
+
+export type Expression =
+  | LiteralExpression
+  | IdentifierExpression
+  | BinaryExpression
+  | UnaryExpression
+  | CallExpression
+  | MemberExpression;
+
+export interface LiteralExpression {
+  type: "literal";
+  value: string | number | boolean | null;
+}
+
+export interface IdentifierExpression {
+  type: "identifier";
+  name: string;
+}
+
+export interface BinaryExpression {
+  type: "binary";
+  operator: string;
+  left: Expression;
+  right: Expression;
+}
+
+export interface UnaryExpression {
+  type: "unary";
+  operator: string;
+  operand: Expression;
+}
+
+/** Function call used inside an expression, e.g. Actor("Adam") */
+export interface CallExpression {
+  type: "call_expr";
+  name: string;
+  args: Expression[];
+}
+
+export interface MemberExpression {
+  type: "member";
+  object: Expression;
+  property: string;
+}
+
+// ──────────────────────────────────────────────
+// Statement AST nodes
+// ──────────────────────────────────────────────
+
+export type Node =
+  | DeclarationNode
+  | SayNode
+  | NarrationNode
+  | IfNode
+  | GotoNode
+  | CallNode
+  | SetNode
+  | BlockNode
+  | JsNode;
+
+export interface DeclarationNode {
+  type: "declare";
+  name: string;
+  value: Expression;
+  line: number;
+}
+
+export interface SayNode {
+  type: "say";
+  actor: string;
+  text: string;
+  line: number;
+}
+
+export interface NarrationNode {
+  type: "narration";
+  text: string;
+  line: number;
+}
+
+export interface IfBranch {
+  condition: Expression | null; // null → else
+  body: Node[];
+}
+
+export interface IfNode {
+  type: "if";
+  branches: IfBranch[];
+  line: number;
+}
+
+export interface GotoNode {
+  type: "goto";
+  target: string;
+  line: number;
+}
+
+export interface CallNode {
+  type: "call";
+  name: string;
+  args: Expression[];
+  line: number;
+}
+
+export interface SetNode {
+  type: "set";
+  name: string;
+  value: Expression;
+  line: number;
+}
+
+export interface BlockNode {
+  type: "block";
+  name: string;
+  body: Node[];
+  line: number;
+}
+
+export interface JsNode {
+  type: "js";
+  code: string;
+  line: number;
+}
+
+export interface Program {
+  type: "program";
+  body: Node[];
+}
+
+// ──────────────────────────────────────────────
+// Runtime types
+// ──────────────────────────────────────────────
+
+export type StepResult =
+  | { type: "say"; actor: unknown; text: string }
+  | { type: "narration"; text: string }
+  | { type: "end" };
+
+export interface RuntimeContext {
+  getVar: (name: string) => unknown;
+  setVar: (name: string, value: unknown) => void;
+}
+
+export type FunctionHook = (ctx: RuntimeContext, ...args: unknown[]) => unknown;

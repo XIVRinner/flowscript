@@ -1,0 +1,256 @@
+# FlowScript — Architecture & Internals
+
+This document describes how source text becomes an executing dialogue. It covers the three pipeline stages (lexer → parser → runtime) and explains the key design decisions.
+
+---
+
+## Pipeline Overview
+
+```
+Source text (.fsc)
+      │
+      ▼
+┌─────────────┐
+│   Lexer     │  src/lexer/index.ts
+│  tokenize() │
+└──────┬──────┘
+       │  Token[]
+       ▼
+┌─────────────┐
+│   Parser    │  src/parser/index.ts
+│   parse()   │
+└──────┬──────┘
+       │  Program (AST)
+       ▼
+┌─────────────┐
+│   Engine    │  src/runtime/index.ts
+│   next()    │
+└──────┬──────┘
+       │  StepResult  (one per call)
+       ▼
+   Host application
+```
+
+---
+
+## Stage 1 — Lexer (`src/lexer/index.ts`)
+
+### Responsibility
+
+Convert raw source text into a flat `Token[]` list. Every token carries its `type`, raw `value`, and source `line` number.
+
+### Indentation handling
+
+FlowScript is indentation-significant (like Python). The lexer maintains an **indent stack** — a stack of column numbers representing currently open indent levels.
+
+- When a line's leading whitespace is **deeper** than the top of the stack, an `INDENT` token is emitted and the new depth is pushed.
+- When it is **shallower**, one or more `DEDENT` tokens are emitted (one per closed level) and matching depths are popped.
+- Equal depth emits neither.
+
+This means the parser never has to count spaces — it only sees `INDENT` / `DEDENT` boundary tokens.
+
+```
+chapter START:          →  CHAPTER IDENTIFIER COLON NEWLINE
+    hero "Hello"        →  INDENT IDENTIFIER STRING NEWLINE
+                        →  (implicit DEDENT at EOF)
+```
+
+### Two-character operators
+
+The lexer checks 2-character sequences (`==`, `!=`, `>=`, `<=`, `&&`, `||`, `->`) before falling through to single-character symbols to avoid ambiguity.
+
+### Keywords
+
+A static `KEYWORDS` map converts identifiers to their keyword token type at lex time, so the parser never needs string comparisons on identifier values.
+
+---
+
+## Stage 2 — Parser (`src/parser/index.ts`)
+
+### Approach
+
+Hand-written **recursive-descent** parser. Each grammar rule is a method; sub-rules are mutual-recursive method calls. No parser generator is used.
+
+### Grammar (informal)
+
+```
+program     → statement* EOF
+statement   → declare | chapter | if | goto | call | set | js | narration | say
+declare     → DECLARE IDENTIFIER ASSIGN expression NEWLINE
+chapter     → CHAPTER IDENTIFIER COLON NEWLINE block
+if          → IF expression COLON NEWLINE block (ELSEIF expression COLON NEWLINE block)* (ELSE COLON? NEWLINE block)?
+goto        → GOTO IDENTIFIER NEWLINE
+call        → CALL IDENTIFIER LPAREN arglist RPAREN NEWLINE
+set         → SET IDENTIFIER ASSIGN expression NEWLINE
+narration   → STRING NEWLINE
+say         → IDENTIFIER STRING NEWLINE
+js          → JS COLON NEWLINE block
+block       → INDENT statement* DEDENT
+arglist     → (expression (COMMA expression)*)?
+```
+
+### Expression grammar (precedence, low → high)
+
+```
+expression → or
+or         → and (|| and)*
+and        → equality (&& equality)*
+equality   → relational ((== | !=) relational)*
+relational → additive ((> | < | >= | <=) additive)*
+additive   → multiplicative ((+ | -) multiplicative)*
+multiplicative → unary ((* | /) unary)*
+unary      → (! | -) unary | primary
+primary    → NUMBER | STRING | BOOLEAN | NULL
+           | IDENTIFIER (LPAREN arglist RPAREN)? (.IDENTIFIER)*
+           | LPAREN expression RPAREN
+```
+
+Expressions are fully recursive with correct operator precedence built into the call chain — no explicit precedence tables or Pratt parsing needed for this operator set.
+
+### Block parsing
+
+The `block()` helper:
+1. Expects and consumes an `INDENT` token.
+2. Calls `body()`, which reads statements until `DEDENT` or `EOF`.
+3. Consumes the `DEDENT`.
+
+This cleanly separates structural indentation from statement parsing.
+
+### Error reporting
+
+Every node carries a `line` number copied from the triggering token. Parse errors throw with the line number:
+
+```
+Expected COLON but got IDENTIFIER ("hello") at line 12
+```
+
+---
+
+## Stage 3 — Runtime (`src/runtime/index.ts`)
+
+### Frame stack
+
+The engine maintains a **frame stack** — an array of `{ nodes: Node[], index: number }` objects.
+
+- `nodes` is the list of AST nodes to execute at this level.
+- `index` is the read cursor into that list.
+
+When a block body is entered (chapter, `if` branch), a new frame is pushed. When a frame is exhausted, it is popped and execution resumes in the parent frame.
+
+```
+Initial state (after compile):
+  stack = [{ nodes: program.body, index: 0 }]
+
+After entering chapter START:
+  stack = [{ nodes: chapter.body, index: 0 }]
+
+After entering if branch:
+  stack = [{ nodes: chapter.body, index: 2 },
+           { nodes: ifBranch.body, index: 0 }]
+```
+
+### `next()` loop
+
+`next()` is a `while(true)` loop:
+
+1. If the stack is empty → return `{ type: "end" }`.
+2. Peek the top frame. If exhausted → pop and continue.
+3. Take the next node from the frame; call `exec(node)`.
+4. If `exec` returns a non-null `StepResult` → return it to the caller.
+5. Otherwise (silent node) → loop again.
+
+This means the caller always receives exactly one visible event per `next()` call, with all silent processing absorbed internally.
+
+### Node execution
+
+| Node type | Effect |
+|---|---|
+| `say` | Resolves the actor variable from state; interpolates the text; returns `StepResult` |
+| `narration` | Interpolates the text; returns `StepResult` |
+| `declare` | Evaluates expression; writes to state; returns `null` |
+| `set` | Evaluates expression; updates state; returns `null` |
+| `if` | Evaluates each branch condition in order; pushes first truthy branch body as new frame; returns `null` |
+| `goto` | Looks up chapter by name; clears stack; pushes chapter body; returns `null` |
+| `call` | Looks up registered hook; evaluates args; invokes hook; returns `null` |
+| `block` | Pushes block's body as a new frame (chapters encountered inline during flow); returns `null` |
+| `js` | Ignored (stub); returns `null` |
+
+### Goto semantics
+
+`goto` is a **hard reset** — it clears the entire frame stack and pushes only the target chapter's body. This prevents stack growth in dialogue loops and makes `goto` behave like a true jump rather than a subroutine call.
+
+### Expression evaluator
+
+The evaluator is a recursive `evalExpr(expr: Expression): unknown` switch. Key behaviours:
+
+- **Identifiers** look up the variable in the `state` Map. Unknown variables return `null`.
+- **`&&` / `||`** short-circuit using JavaScript's own short-circuit semantics.
+- **Member access** (`hero.name`) safely returns `null` for missing keys or non-object values.
+- **Call expressions** (`Actor("Lyra")`) invoke registered hooks and capture the return value.
+
+### String interpolation
+
+Interpolation is handled in `interpolate(text: string): string`. The regex `/\$\{([^}]+)\}/g` extracts each `${…}` region; the inner string is:
+
+1. Tokenised with `tokenize()`.
+2. Parsed as a single expression with `parseExpressionTokens()`.
+3. Evaluated against the current state.
+
+Errors inside an interpolation expression are caught and silently replaced with an empty string, so a bad interpolation never crashes the engine.
+
+### State
+
+All variables are stored in a single `Map<string, unknown>`. There is no scoping — every variable is global within a running script. This is intentional: FlowScript is a dialogue *control* language, not a general-purpose language.
+
+---
+
+## File Map
+
+```
+src/
+  types.ts
+  │  TokenType enum
+  │  Token interface
+  │  Expression union + subtypes
+  │  Node union + subtypes
+  │  Program
+  │  StepResult, FunctionHook, RuntimeContext
+  │
+  lexer/index.ts
+  │  tokenize(source) → Token[]
+  │
+  parser/index.ts
+  │  parse(tokens) → Program
+  │  parseExpressionTokens(tokens) → Expression
+  │  class Parser (private)
+  │
+  runtime/index.ts
+  │  class Engine
+  │    constructor(program)
+  │    registerFunction(name, fn)
+  │    next() → StepResult
+  │    getState() → Record<string, unknown>
+  │    (private) exec(node) → StepResult | null
+  │    (private) evalExpr(expr) → unknown
+  │    (private) interpolate(text) → string
+  │
+  index.ts
+     compile(source) → Program    ← convenience facade
+     re-exports: tokenize, parse, parseExpressionTokens, Engine, TokenType, all types
+```
+
+---
+
+## Design Principles
+
+**Controlled, not Turing-complete.**  
+FlowScript deliberately excludes while loops, closures, and arbitrary code execution. Behaviour is predictable and auditable from the script source alone.
+
+**The host controls pacing.**  
+`engine.next()` returns one beat and blocks. The host application decides when to call it — on a keypress, a timer, a UI button. FlowScript has no concept of time.
+
+**Silent vs. visible nodes.**  
+Only `say` and `narration` produce `StepResult` values. Everything else is silently consumed. This separation keeps the host integration loop simple: just check `step.type`.
+
+**No parser generator.**  
+The grammar is small and stable enough that a hand-written recursive-descent parser is easier to read, debug, and extend than generated code.
