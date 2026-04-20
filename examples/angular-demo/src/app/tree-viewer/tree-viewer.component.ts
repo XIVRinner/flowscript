@@ -1,6 +1,6 @@
 import { Component, Input, OnChanges } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { compile, serializeTree, SerializedProgram, SerializedNode } from 'flowscript';
+import { compile, serializeTree, SerializedProgram, SerializedNode } from '@rinner/valeflow';
 
 @Component({
   selector: 'app-tree-viewer',

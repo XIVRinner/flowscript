@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { compile, Engine, StepResult } from 'flowscript';
+import { compile, Engine, StepResult } from '@rinner/valeflow';
 
 export interface DialogueStep {
   kind: 'say' | 'narration' | 'log';

@@ -40,7 +40,7 @@ chapter ENTER:
 ## Installation
 
 ```bash
-npm install flowscript
+npm install @rinner/valeflow
 ```
 
 ---
@@ -48,7 +48,7 @@ npm install flowscript
 ## Quick Start
 
 ```ts
-import { compile, Engine } from "flowscript";
+import { compile, Engine } from "@rinner/valeflow";
 
 const source = `
 declare hero = Actor("Lyra")
@@ -205,7 +205,7 @@ if (step.type === "choice") {
 Export the full AST as structured JSON — useful for authoring tools, analytics, or porting to other engines:
 
 ```ts
-import { compile, serializeTree } from "flowscript";
+import { compile, serializeTree } from "@rinner/valeflow";
 
 const tree = serializeTree(compile(source));
 console.log(JSON.stringify(tree, null, 2));
@@ -237,7 +237,7 @@ Output shape:
 ## Multi-File Projects
 
 ```ts
-import { loadProject, Engine } from "flowscript";
+import { loadProject, Engine } from "@rinner/valeflow";
 
 const project = loadProject([
   { filename: "globals.fsc", source: globalsSrc },
