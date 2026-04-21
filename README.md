@@ -371,7 +371,7 @@ See [docs/architecture.md](docs/architecture.md) for internals.
 - Added better expression support: string concatenation, safe member access, and explicit operator semantics
 - Added engine save/load snapshots via `engine.saveState()` / `engine.loadState()`
 - Added persistent state via `EngineOptions.persistent` — a host-owned store for values that survive across playthroughs
-- Added chapter state tracking (`visited` / `completed`ú flags on chapter states)
+- Added chapter state tracking (`visited` / `completed` flags on chapter states)
 ---
 
 ## License
